@@ -1,0 +1,184 @@
+\documentclass[a4paper,twoside]{book}
+\let\newfloat\undefined
+\usepackage[framemethod=1,skipbelow=\topskip,skipabove=\topskip]{mdframed}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{lipsum}
+\usepackage{xspace}
+\usepackage{fancyhdr}
+\usepackage[Sonny]{fncychap}
+
+\usepackage{caption}
+\usepackage{floatrow}
+\floatsetup[figure]{facing=yes,capbesideposition={top,inside},capbesidesep=quad}
+\setlength{\floatsep}{1.25\baselineskip plus 3pt minus 2pt}
+\setlength{\intextsep}{1.2ex}
+
+\usepackage{makeidx}
+
+
+\usepackage{fontspec,xltxtra,xunicode}
+\defaultfontfeatures{Scale=MatchLowercase}
+\setromanfont[Mapping=tex-text]{Minion Pro} 
+\setsansfont[Mapping=tex-text]{Myriad Pro} 
+\setmonofont[Scale=0.91]{Inconsolata}
+\newfontfamily{\titlefont}[Scale=1.4]{Fertigo Pro}
+\definecolor{grey30}{rgb}{.3,.3,.3}
+\definecolor{grey70}{rgb}{.7,.7,.7}
+\definecolor{mybrown}{rgb}{.5,.4,.3}
+\definecolor{myred}{rgb}{.75,.19,.19}
+\definecolor{myred2}{rgb}{.87,.38,.38}
+\definecolor{myred3}{rgb}{.65,.38,.38}
+\definecolor{myred4}{rgb}{.83,.64,.64}
+\definecolor{shadecolor}{rgb}{.87,.93,.89}
+
+\usepackage[formats]{listings}
+\lstdefineformat{tilde}{\~=\textcolor{myred3}{$\mathtt{\sim}$}}
+
+\lstloadlanguages{R} 
+\lstdefinelanguage{Renhanced}[]{R}{% 
+   morekeywords={xyplot}, 
+   deletekeywords={*}}
+\lstset{language=Renhanced,
+	format=tilde,
+	keepspaces=true,
+	%escapeinside={\%*}{*)},
+	extendedchars=true, 
+	alsoletter={.},
+	upquote=true,
+	basicstyle=\small\ttfamily, 
+   	commentstyle=\color{myred4}, 
+   	keywordstyle=\color{myred3}, 
+   	showstringspaces=false, 
+   	index=[1][keywords], 
+   	indexstyle=\indexfoo} 
+
+\newcommand{\indexfoo}[1]{\index{#1@{\tt #1}}} 
+\makeatletter
+\lst@AddToHook{TextStyle}{\let\lst@basicstyle\normalsize\ttfamily}
+\makeatother
+\renewcommand{\texttt}[1]{\lstinline{#1}}
+\newcommand{\R}{\textsf{R}\xspace}
+
+\mdfsetup{innerbottommargin=0pt,leftmargin=0pt,rightmargin=0pt,%
+          backgroundcolor=shadecolor,linecolor=none,roundcorner=5}
+\BeforeBeginEnvironment{lstlisting}{\begin{mdframed}\vskip-.5\baselineskip}
+\AfterEndEnvironment{lstlisting}{\end{mdframed}}
+
+% I'm using temporarily this example title page, roughly copy/pasted from the 
+% Memoir class package.
+\definecolor{Medium}{gray}{.6}
+\newlength{\tpheight}\setlength{\tpheight}{0.9\textheight}
+\newlength{\txtheight}\setlength{\txtheight}{0.9\tpheight}
+
+
+
+\makeindex
+
+\begin{document}
+\pagenumbering{arabic}
+\thispagestyle{empty}
+\begingroup% T&H Typography
+\raggedleft
+\vspace*{\baselineskip}
+{\Large Christophe Lalanne}\\[0.167\txtheight]
+{\Large\titlefont A Visual Guide to}\\[\baselineskip]
+{\textcolor{Medium}{\Huge\titlefont R Graphics}}\\[\baselineskip]
+{\tiny\titlefont With 123 illustrations}\par
+\vfill
+{\includegraphics[scale=.5]{logo}}\par
+\vspace*{3\baselineskip}
+\endgroup
+
+\frontmatter
+\tableofcontents
+\mainmatter
+\chapter{Introduction}
+
+\chapter{Data management}
+
+The most common structure to store a data set with mixed-type
+variables is a \texttt{data.frame}.
+
+\lipsum
+
+\chapter{Two-way graphics}
+
+
+
+
+\section{Scatterplots}
+The basic \R command for displaying a two-way scatterplot is
+\texttt{xyplot}. A command like \texttt{xyplot(y ~ x)} will produce a
+2D plot almost identical to what would be obtained using base
+graphics, \texttt{plot(x, y)}. However, the default layout is
+generally better and it looks more pretty.
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(dist ~ speed, data=cars)
+\end{lstlisting}
+\fcapside[\FBwidth]
+{\includegraphics[width=2.5in]{fig_001-crop}}
+{\caption*{This basic scatterplot show default options when calling the
+\texttt{xyplot} command. The formula interface is used to plot
+\texttt{dist} ($y$-axis) as a function of \texttt{speed} ($x$-axis),
+with automatic determination of axis units.}}
+\end{figure}
+
+
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(dist ~ speed, data=cars, pch=rbinom(nrow(cars), 1, .5)+1)
+\end{lstlisting}
+\fcapside[\FBwidth]
+{\includegraphics[width=2.5in]{fig_002-crop}}
+{\caption*{We pick a random symbol () for each observation,
+using the \texttt{pch=} argument. In fact, this argument is
+transferred to the \texttt{panel.xyplot} function that acts as the
+default panel function.}}
+\end{figure}
+
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(dist ~ speed, data=cars, 
+       col=with(cars, cut(speed, breaks=quantile(speed), 
+                          include.lowest=TRUE)))
+\end{lstlisting}
+\fcapside[\FBwidth]
+{\includegraphics[width=2.5in]{fig_003-crop}}
+{\caption*{Color (\texttt{col=}) of each observation depends of the quartile they
+    belong to.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(dist ~ speed, data=cars, aspect=.3, type=c("p", "r"),
+             col.line="grey75",
+             panel=function(x, y, ...) {
+               panel.xyplot(x, y, ...)
+               panel.rug(x, y, ...)
+             })
+\end{lstlisting}
+\fcapside[\FBwidth]
+{\includegraphics[width=2.5in]{fig_004-crop}}
+{\caption*{We pick a random color--black (1) or red (2)--for each observation,
+using the \texttt{col=} argument. In fact, this argument is
+transferred to the \texttt{panel.xyplot} function that acts as the
+default panel function.}}
+\end{figure}
+
+\lipsum[1]
+
+\chapter{Multi-way graphics}
+
+
+
+\appendix
+\backmatter
+
+\printindex
+
+\end{document}
