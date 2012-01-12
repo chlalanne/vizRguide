@@ -7,15 +7,26 @@
 \usepackage{xspace}
 \usepackage{fancyhdr}
 \usepackage[Sonny]{fncychap}
-
+\usepackage{marginnote}
 \usepackage{caption}
 \usepackage{floatrow}
 \floatsetup[figure]{facing=yes,capbesideposition={top,inside},capbesidesep=quad}
 \setlength{\floatsep}{1.25\baselineskip plus 3pt minus 2pt}
 \setlength{\intextsep}{1.2ex}
-
+\usepackage{wasysym}
 \usepackage{makeidx}
+\usepackage{pdfpages}
+\newcounter{fig}
+\setcounter{fig}{1}
+\newcommand{\img}[1]{\includegraphics[page={\value{fig}},width=2in]{#1}\stepcounter{fig}}
 
+
+\immediate\write18{sh ./vc}
+\input{vc}
+
+\usepackage[style=verbose-trad2,natbib=true]{biblatex}
+\bibliography{refs}
+\usepackage[hang,flushmargin]{footmisc} 
 
 \usepackage{fontspec,xltxtra,xunicode}
 \defaultfontfeatures{Scale=MatchLowercase}
@@ -37,7 +48,17 @@
 
 \lstloadlanguages{R} 
 \lstdefinelanguage{Renhanced}[]{R}{% 
-   morekeywords={xyplot}, 
+   morekeywords={data.frame,within,as.numeric,cut,xyplot,histogram,%
+                 groups,breaks,include.lowest,with,pch,panel.xyplot,%
+                 replicate,alpha,colorRampPalette,jitter.x,amount,%
+                 panel.rug,brewer.pal,rgb,jitter.y,Hmisc::describe,%
+                 Hmisc::summary.formula,type,scales,xscale.components,%
+                 yscale.components,xscale.components.log10.3,%
+                 yscale.components.log10.3,box.ratio,limits,at,%
+                 panel.bwplot,panel.points,cex,zoo,plot.points,%
+                 ref,panel.histogram,panel.mathdensity,dmath,border,%
+                 densityplot,nint,tck,alternating,boxplot.stats,%
+                 na.rm}, 
    deletekeywords={*}}
 \lstset{language=Renhanced,
 	format=tilde,
@@ -53,12 +74,13 @@
    	index=[1][keywords], 
    	indexstyle=\indexfoo} 
 
-\newcommand{\indexfoo}[1]{\index{#1@{\tt #1}}} 
+\newcommand{\indexfoo}[1]{\index{#1@\textcolor{grey30}{\tt #1}}} 
 \makeatletter
 \lst@AddToHook{TextStyle}{\let\lst@basicstyle\normalsize\ttfamily}
 \makeatother
 \renewcommand{\texttt}[1]{\lstinline{#1}}
 \newcommand{\R}{\textsf{R}\xspace}
+\newcommand{\mytilde}{\textcolor{myred3}{$\sim$}\xspace}
 
 \mdfsetup{innerbottommargin=0pt,leftmargin=0pt,rightmargin=0pt,%
           backgroundcolor=shadecolor,linecolor=none,roundcorner=5}
@@ -70,9 +92,11 @@
 \definecolor{Medium}{gray}{.6}
 \newlength{\tpheight}\setlength{\tpheight}{0.9\textheight}
 \newlength{\txtheight}\setlength{\txtheight}{0.9\tpheight}
+\renewcommand*{\marginfont}{\color{grey70}\sffamily\footnotesize}
 
 
-
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1ex plus 0.5ex minus 0.2ex}
 \makeindex
 
 \begin{document}
@@ -81,12 +105,12 @@
 \begingroup% T&H Typography
 \raggedleft
 \vspace*{\baselineskip}
-{\Large Christophe Lalanne}\\[0.167\txtheight]
+{\Large\textsf{Christophe Lalanne}}\\[0.167\txtheight]
 {\Large\titlefont A Visual Guide to}\\[\baselineskip]
 {\textcolor{Medium}{\Huge\titlefont R Graphics}}\\[\baselineskip]
 {\tiny\titlefont With 123 illustrations}\par
 \vfill
-{\includegraphics[scale=.5]{logo}}\par
+{\includegraphics[scale=.5]{logo}\\{\small \tt \GITAbrHash}\\{\small \tt \VCDateTEX}}\par
 \vspace*{3\baselineskip}
 \endgroup
 
@@ -97,12 +121,349 @@
 
 \chapter{Data management}
 
-The most common structure to store a data set with mixed-type
-variables is a \texttt{data.frame}.
+\section{Structuring data}
+In R, the most common structure used to store a data set with
+mixed-type variables is a \texttt{data.frame}. Such an \R object
+presents several characteristics that makes it most appropriate for
+managing statistical data structure, with few exceptions (e.g., when
+one only has to work with aggregated data or two-way tables). It
+should be noted that other data structures might be more appropriate,
+for example when one is interested in time series analysis, but see
+the \texttt{zoo} package\autocite{zeilis05}.
 
-\lipsum
+Many \R functions accept \texttt{data.frame} as input, and further
+allow to subset or index it for computation or visualization
+purpose. In addition to receiving a \texttt{data.frame}, some \R
+commands allow to use a \emph{formula} notation, where the right and
+left-hand side are separated by the \mytilde (tilde) operator. The
+use of \index{formula} together with a \texttt{data.frame} simplify the
+accession of variable in a given environment.
+This is especially true when using the \texttt{lattice} package which
+is entirely based on formula, even if this is not apparent at
+first sight.
+
+\section{Managing data}
+Consider, for example, the \emph{low birth study} which is discussed
+at length in Hosmer and Lemeshow's textbook on logistic regression
+\autocite{hosmer89}. A quick look at the variables should make it
+clear that they won't be treated the way we like them to be
+considered: mother's ethnicity status (\texttt{race}) takes three
+integer values, without any explicit meaning.
+
+\begin{verbatim}
+data(birthwt, package="MASS")
+str(birthwt)
+\end{verbatim}
+
+Instead, we might want to recode all categorical predictors as \R
+factors, like this:
+\begin{verbatim}
+birthwt <- within(birthwt, {
+  low <- factor(low, labels=c("No","Yes"))
+  race <- factor(race, labels=c("White","Black","Other"))
+  smoke <- factor(smoke, labels=c("No","Yes"))
+  ui <- factor(ui, labels=c("No","Yes"))
+  ht <- factor(ht, labels=c("No","Yes"))
+})
+\end{verbatim}
+
+In case we would like to consider one of the above factors as a
+numerical variable, we can now use \texttt{as.numeric} and \R will
+take care of attributing the lowest integer score to the baseline
+category. Of course, there might be occasion where we would like to
+change that reference level; or, we might want to collapse two
+discrete categories. Again, there are simple commands to do that, for
+example:
+\begin{verbatim}
+birthwt$low <- relevel(birthwt$low, "Yes")
+levels(birthwt$race)[2:3] <- "Black+Other"
+\end{verbatim}
+
+Another common task consists in transforming some predictors, either
+for visualization purpose or when building an explantory or predictive
+model. As a simple example, we can imagine centering some of the
+predictors of interest, like \texttt{age}, in the above example. The
+\texttt{within} or \texttt{transform} command can be used to append
+the centered variable to the list of variables present in the
+\texttt{data.frame}:
+\begin{verbatim}
+birthwt <- transform(birthwt, age.c=scale(age, scale=FALSE))
+\end{verbatim}
+
+Likewise, we may want to recode previous premature labours
+(\texttt{ptl}) as yes/no and number of physician visits during the
+first trimester (\texttt{ftv}) as one/more than one, like shown below
+(we show two different syntax that basically perform the same task by
+relying on \R indexing):
+\begin{verbatim}
+birthwt <- transform(birthwt, ptl.yn=factor(ptl > 0, labels=c("No","Yes")), 
+                     ftv.c=factor(ifelse(ftv < 2, "1", "2+")))
+\end{verbatim}
+
+If there is some reason to treat \texttt{ftv} as an ordered factor,
+a command like
+\begin{verbatim}
+as.ordered(Hmisc::cut2(birthwt$ftv, c(0, 1, 2, 6)))
+\end{verbatim}
+might do the job. (This would also be possible with the base
+\texttt{cut} function, but the one in
+\texttt{Hmisc}\autocite{harrell11} has better default options and it
+is more flexible.)
+
+\section{Indexing, subsetting, conditioning}
+A lot of statistical operations that practictioners use to apply on a
+given dataset are mostly variations around the idea of indexing or
+subsetting. 
+
+We have already seen an example of indexing when we recoded factor
+levels of two explanatory variables in the low birth dataset.
+
+\section{Summarizing data}
+Statisticians generally spend a great part of their time in data
+cleansing, data transformation or re-expression\autocite{hoaglin83},
+and data visualization. There are numerous \R functions that will
+facilitate the task of data checking (\texttt{Hmisc::describe}
+provides ``codebook'' facilities), summarizing data (\texttt{summary},
+\texttt{Hmisc::summary.formula}), aggregating data (\texttt{tapply},
+\texttt{aggregate}). 
+
+The \texttt{plyr} package\autocite{wickham11} offers a general
+solution to those kind of tasks.
+
+\chapter{Univariate distributions}
+
+\section{Stripchart}
+
+
+stripplot(~ rnorm(200), jitter.data = TRUE, factor = 0.8)
+stripplot(rnorm(30) ~ 1, horizontal=F,
+          scales=list(x=list(draw=FALSE)), xlab="")
+
+\section{Histograms}
+\begin{figure}[H]
+\begin{lstlisting}
+histogram(~ waiting, data=faithful)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{faithful}. Waiting time between
+        eruptions and the duration of the eruption for the Old
+        Faithful geyser in Yellowstone National Park, Wyoming, USA.}A
+      simple histogram of waiting time expressed as density. Note that
+      forgetting the \mytilde operator will raise an error message.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+histogram(~ waiting, data=faithful, type="count")
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{Same as above but with counts instead of density.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+histogram(~ waiting, data=faithful, border=NA, nint=12)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{Using a finer grid size and removing the borders. (To
+      remove all colors, use \texttt{col=NULL}.)}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+x <- rnorm(100, mean=12, sd=2)
+histogram(~ x, type="density", border=NA,
+          panel=function(x, ...) {
+            panel.histogram(x, ...)
+            panel.mathdensity(dmath=dnorm, col="#BF3030",
+                              args=list(mean=mean(x),sd=sd(x)))
+          })
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{An example where we superimposed a normal density with
+      parameters estimated from the sample.)}}
+\end{figure}
+
+\section{Density plots}
+
+\begin{figure}[H]
+\begin{lstlisting}
+densityplot(~ waiting, data=faithful)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+densityplot(~ waiting, data=faithful, plot.points="rug")
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+densityplot(~ waiting, data=faithful, plot.points=FALSE, ref=TRUE)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{}}
+\end{figure}
+
+
+\section{Barcharts}
+
+\section{Dotcharts}
+
+\section{Quantile plots}
+
+\section{Boxplots}
+
+\begin{figure}[H]
+\begin{lstlisting}
+bwplot(~ height, data=women)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{women}. This data set gives the
+        average heights and weights for American women aged 30-39.}
+      Boxplot are shown in horizontal mode by default. Internally, the
+      \texttt{boxplot.stats} function is used so that hinges
+      corresponds to the first and third quartile while notches
+      extends to $\pm 1.58\textrm{IQR}/\sqrt{n}$. It provides a visual
+      summary analogous to Tukey's five number (see
+      \texttt{fivenum}).}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+bwplot(~ height, data=women, box.ratio=.5)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{This is the
+      same picture but with a thinner box. When there are several
+      boxplots to draw side by side, this might be useful.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+bwplot(~ height, data=women, box.ratio=.5,
+       scales=list(x=list(limits=c(50, 80), at=seq(50, 80, by=2))))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{A more
+      detailed $x$-scale has been created (without prejudice to its
+      usefulness) by simply updating the \texttt{scales=} argument.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+bwplot(~ height, data=women, aspect=.5, 
+       panel=function(x, ...) {
+         panel.bwplot(x, pch="|", ...)
+         panel.points(mean(x), 1, pch=19, cex=1)
+       })
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{It is
+      possible to alter the way boxplot are drawn, but also the
+      statistical summaries that are displayed. For instance, in the
+      above code, we computed the mean (drawn as a vertical bar inside
+      the box) in addition to the median. Of note, if there are
+      missing values, we should add \texttt{na.rm=TRUE} when calling
+      \texttt{mean(x)}.}}
+\end{figure}
+
+\section{Time series}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(sunspot.year)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{sunspot.year}. Yearly numbers of
+        sunspots from 1700 to 1988.} A simple time-series is displayed
+      as a lineplot, but taking care of arranging the $x$-axis for
+      time measurements.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(sunspot.year, aspect=.3, scales=list(y=list(rot=0)))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{A more
+      comprehensive picture after aspect ratio has been lowered so as
+      to better highlight the cyclic component.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(sunspot.year, strip=FALSE, cut=list(number=2, overlap=.05))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{The same time series cut into two pieces with 5\% of overlap.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(sunspot.year, strip=FALSE, strip.left=TRUE, 
+       cut=list(number=2, overlap=.05))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{Now we highlight explicitely that the two series of
+      measurements are related by adding a colored ribbon denoting
+      time period.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(zoo(discoveries))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{discoveries}. The numbers of ``great''
+        inventions and scientific discoveries in each year from 1860
+        to 1959.} The \texttt{zoo} has to be loaded before using the
+      above command. Briefly, it takes care of handling time-series
+      data correctly, and it is interfaced to \texttt{lattice}'s
+      \texttt{xyplot} as an S3 method (see \texttt{xyplot.zoo}).}}
+\end{figure}
+
 
 \chapter{Two-way graphics}
+
+This chapter covers graphical displays for two-way relationships,
+possibly by considering additional variables (numerical or
+categorical) to highlight ternary relationships. Two-way graphics are
+not limited to numerical variables as we may be interested in showing
+the relationships between two ordered categorical variables, two
+unordered or ``nominal'' variables. Moreover, as stated above,
+categorical or discretized variables can be used to provide additional
+information on top of a line- or scatter-plot by simply varying point
+size, point or line colors, and so on. Of course, we could extend this
+idea to the point of displaying sixth dimensions in a single graph
+(e.g., using symbol with varying length and width, color, and shading
+pattern). But, such a complex graph would likely be poorly
+readable and uninformative in the end. So, this chapter basically
+provides necessary \R command to create line-plot, scatter-plot,
+bar-plot, dot-plot
+
+
+\section{Lineplots}
+
+% \begin{figure}[H]
+% \begin{lstlisting}
+% xyplot(uptake ~ conc, data=CO2, groups=Treatment)
+% \end{lstlisting}
+%   \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+%   {\caption*{\marginnote{\textbf{CO2}. The CO2 data frame has 84 rows
+%         and 5 columns of data from an experiment on the cold tolerance
+%         of the grass species \emph{Echinochloa crus-galli}.} Automatic
+%     averaging}}
+% \end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(uptake ~ conc, data=CO2, groups=Treatment, type="a")
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{Automatic averaging.}}
+\end{figure}
 
 
 
@@ -118,12 +479,14 @@ generally better and it looks more pretty.
 \begin{lstlisting}
 xyplot(dist ~ speed, data=cars)
 \end{lstlisting}
-\fcapside[\FBwidth]
-{\includegraphics[width=2.5in]{fig_001-crop}}
-{\caption*{This basic scatterplot show default options when calling the
-\texttt{xyplot} command. The formula interface is used to plot
-\texttt{dist} ($y$-axis) as a function of \texttt{speed} ($x$-axis),
-with automatic determination of axis units.}}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{cars}. The data give the speed of
+        cars and the distances taken to stop.  Note that the data were
+        recorded in the 1920s.}This basic scatterplot show default
+      options when calling the \texttt{xyplot} command. The formula
+      interface is used to plot \texttt{dist} ($y$-axis) as a function
+      of \texttt{speed} ($x$-axis), with automatic determination of
+      axis units.}}
 \end{figure}
 
 
@@ -132,12 +495,14 @@ with automatic determination of axis units.}}
 \begin{lstlisting}
 xyplot(dist ~ speed, data=cars, pch=rbinom(nrow(cars), 1, .5)+1)
 \end{lstlisting}
-\fcapside[\FBwidth]
-{\includegraphics[width=2.5in]{fig_002-crop}}
-{\caption*{We pick a random symbol () for each observation,
-using the \texttt{pch=} argument. In fact, this argument is
-transferred to the \texttt{panel.xyplot} function that acts as the
-default panel function.}}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{We pick a
+      random symbol (${\scriptstyle\Circle}=1$,
+      ${\scriptstyle\triangle}=2$) for each observation, using the
+      \texttt{pch=} argument. In fact, this argument is transferred to
+      the \texttt{panel.xyplot} function that acts as the default
+      panel function. Note that the vector of symbols should have the
+      same length as the $x$ and $y$ components, otherwise recycling
+      occurs.}}
 \end{figure}
 
 
@@ -147,34 +512,169 @@ xyplot(dist ~ speed, data=cars,
        col=with(cars, cut(speed, breaks=quantile(speed), 
                           include.lowest=TRUE)))
 \end{lstlisting}
-\fcapside[\FBwidth]
-{\includegraphics[width=2.5in]{fig_003-crop}}
-{\caption*{Color (\texttt{col=}) of each observation depends of the quartile they
-    belong to.}}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{Color
+      (\texttt{col=}) of each observation depends of the quartile they
+      belong to. Note that passing colors this way will override
+      default theming options.}}
 \end{figure}
 
 \begin{figure}[H]
 \begin{lstlisting}
-xyplot(dist ~ speed, data=cars, aspect=.3, type=c("p", "r"),
-             col.line="grey75",
-             panel=function(x, y, ...) {
-               panel.xyplot(x, y, ...)
-               panel.rug(x, y, ...)
-             })
+xyplot(dist ~ speed, data=cars, pch=19,
+       groups=with(cars, cut(speed, breaks=quantile(speed), 
+                          include.lowest=TRUE)))
 \end{lstlisting}
-\fcapside[\FBwidth]
-{\includegraphics[width=2.5in]{fig_004-crop}}
-{\caption*{We pick a random color--black (1) or red (2)--for each observation,
-using the \texttt{col=} argument. In fact, this argument is
-transferred to the \texttt{panel.xyplot} function that acts as the
-default panel function.}}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{This is
+      basically the same code as previously shown except that we
+      replaced the \texttt{col=} argument by \texttt{groups=}. This
+      has the advantage of observing the current theme, and this will
+      further facilitate the insertion of an automatic legend.}}
 \end{figure}
 
-\lipsum[1]
+\begin{figure}[H]
+\begin{lstlisting}
+xy <- as.data.frame(replicate(2, rnorm(1000)))
+xyplot(V1 ~ V2, data=xy, pch=19, alpha=.5)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{When there
+      are a high proportion of points that overlap, using transparent
+      color may be useful. We replaced the default symbol with its
+      filled counterpart. An equivalent way of specifying transparent
+      color would be to use \texttt{rgb(.22, .49, .72, alpha=.5)}.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+dat <- data.frame(replicate(2, rnorm(500)), z=sample(0:40, 500, T))
+cols <- colorRampPalette(brewer.pal(11, "RdBu"))(diff(range(dat$z)))
+xyplot(X1 ~ X2, data=dat, col=cols[dat$z], pch=19, alpha=.5)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{Alpha-blending and color palette might be combined as
+      well. Here, we used a pre-defined color scheme (Red to Blue)
+      from the \texttt{RColorBrewer} package. As the selected palette
+      has only 11 different colors, whereas the grouping factor,
+      \texttt{z}, has 40 levels, we use linear interpolation to
+      increase the number of available colors.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(Sepal.Length ~ Petal.Length, data=iris, jitter.x=TRUE, 
+       amount=.2)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{iris}. This famous (Fisher's or
+        Anderson's) iris data set gives the measurements in
+        centimeters of the variables sepal length and width and petal
+        length and width, respectively, for 50 flowers from each of 3
+        species of iris.  The species are \emph{Iris setosa},
+        \emph{versicolor}, and \emph{virginica}.}As an alternative to
+      transparent colors, one may resort on ``jittering''. This is
+      also useful when not so many points are available but show few
+      variations on one dimension. The \texttt{panel.xyplot} function
+      uses \texttt{jitter.x=} and \texttt{jitter.y=} to vary $x$ and
+      $y$ coordinates by adding a random shift drawn from a uniform
+      distribution, $\mathcal{U}(-a,a)$, where $a$ stands for the
+      \texttt{amount=} parameter.}}
+\end{figure}
+
+% xyplot(uptake ~ conc, data=CO2, groups=Treatment)
+% with(CO2, aggregate(uptake, list(conc=conc), mean))
+% library(plyr)
+% ddply(CO2, c("Treatment", "Plant"), transform, uptake.m = mean(uptake))
+
+% xyplot(log(Volume) ~ log(Girth), data = trees)
+
+
+% xyplot(FSC.H ~ SSC.H, gvhd10, subset=SSC.H < 1000, alpha=.1, cex=.6)
+% xyplot(FSC.H ~ SSC.H, gvhd10, subset=SSC.H < 1000, panel = panel.hexbinplot)
+% xyplot(FSC.H ~ SSC.H, gvhd10, subset=SSC.H < 1000, panel =
+% panel.hexbinplot, trans=sqrt)
+
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(dist ~ speed, data=cars,
+       panel=function(x, y, ...) {
+         panel.xyplot(x, y, ...)
+         panel.rug(x, y, ...)
+       })
+\end{lstlisting}
+\fcapside[\FBwidth]
+{\img{figs_lattice-crop}}
+{\caption*{It is possible to superimpose the univariate distribution
+    of both series of measurement using ``rug'' plots. Usually, they
+    remain quite discreet (read \emph{non-invasive}) but provide
+    additional information to spot possible asymmetry. We need to ask
+    explicitly for a custom \texttt{panel}, though.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(log(Volume) ~ log(Girth), data=trees)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{trees}. This data set provides
+        measurements of the girth, height and volume of timber in 31
+        felled black cherry trees.  Note that girth is the diameter of
+        the tree (in inches) measured at 4 ft 6 in above the ground.}
+      A simple log-log plot. Note that we would have to manually
+      update the \texttt{scales=} component to provide more suitable
+      annotations for the $x$ and $y$-axis.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot((1:200)/20 ~ (1:200)/20, type=c("p", "g"),
+       scales=list(x=list(log=10), y=list(log=10)),
+       xscale.components=xscale.components.log10.3,
+       yscale.components=yscale.components.log10.3)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{Instead of
+      transforming variables in the formula, it is easier and safer to
+      do this through the \texttt{scales=} parameter. The
+      \texttt{[x|y]scale.components} are convenient functions that
+      help to annotate axes with correct units and tick marks
+      spacing.}}
+\end{figure}
+
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(dist ~ speed, data=cars, scales=list(tck=c(1,0)))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{To get ride
+      of ticks on opposite axes, we can change default values for
+      \texttt{tck=} in the \texttt{scales=} component. The
+      \texttt{tck=} parameter controls the length of tick marks;
+      however, with a vector of length 2 it can be used to deal with
+      left/bottom and right/top axis separately.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(dist ~ speed, data=cars, scales=list(alternating=3))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{To annotate
+      both axes, we can alter the \texttt{alternating=} parameter. In
+      most case, however, adding grid lines in the background should
+      provide enough information. Using \texttt{alternating=2} would
+      reverse the annotation of axis (right/top instead of
+      left/bottom).}}
+\end{figure}
 
 \chapter{Multi-way graphics}
 
+This chapter focus on multi-variable displays, where usually two-way
+graphics are conditioned on values taken by one or more variables, or
+a combination thereof. These so-called ``\index{treillis} displays'' are very
+good at conveying information about trend or variation between two
+numerical variables across the levels of a third factor.
 
+
+
+\chapter{Customizing theme and panels}
 
 \appendix
 \backmatter
