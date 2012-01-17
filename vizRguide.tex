@@ -1,4 +1,4 @@
-% Time-stamp: <2012-01-16 13:01:11 chl>
+% Time-stamp: <2012-01-17 17:16:38 chl>
 
 %
 % Here is a temptative textbook on R graphics with the lattice package.
@@ -19,7 +19,7 @@
 \usepackage{lipsum}
 \usepackage{xspace}
 
-% Override default hedings and chapter style
+% Override default headings and chapter style
 \usepackage{fancyhdr}
 \usepackage[Sonny]{fncychap}
 
@@ -96,8 +96,14 @@
                  panel.bwplot,panel.points,cex,zoo,plot.points,%
                  ref,panel.histogram,panel.mathdensity,dmath,border,%
                  densityplot,nint,tck,alternating,boxplot.stats,%
-                 na.rm,span}, 
-   deletekeywords={*,/}}
+                 na.rm,span,jitter.data,horizontal,draw,stripchart,%
+                 aspect,seg.col,seg.lwd,xlab,ylab,varwidth,fill,bw,%
+                 par.settings,simpleTheme,lwd,panel.xyarea,lag,%
+                 panel.superpose,superpose,group.number,panel.groups,%
+                 overlap,ts.union,layer,panel.tskernel,panel.lines,%
+                 rollmean,number,strip,strip.left,filter,panel.xblocks,%
+                 method,auto.key,columns,horizonplot,colorkey}, 
+   deletekeywords={*,/,gaussian}}
 \lstset{language=Renhanced,
 	format=tilde,
 	keepspaces=true,
@@ -168,10 +174,12 @@
 {\textcolor{Medium}{\Huge\titlefont R Graphics}}\\[\baselineskip]
 {\tiny\titlefont With 123 illustrations}\par
 \vfill
-{\includegraphics[scale=.5]{logo}\\{\small \tt \GITAbrHash}\\{\small
+{\includegraphics[scale=.75]{logo}\\{\small \tt \GITAbrHash}\\{\small
     \tt \VCDateTEX}}\par 
 \vspace*{3\baselineskip}
 \endgroup
+\cleardoublepage
+\thispagestyle{empty}
 
 \frontmatter
 \tableofcontents
@@ -348,11 +356,72 @@ solution to those kind of tasks.
 \chapter{Univariate distributions}
 
 \section{Stripchart}
+Stripchart aims at showing the distribution of a series of continuous
+measurements (much like scatterplot for 2D data discussed in
+\S~\ref{sec:scatterplot}). They are useful for small to moderate
+dataset. With large $N$ it is proably better to switch to alternative
+displays, see next sections.
 
+\begin{figure}[H]
+\begin{lstlisting}
+x <- sample(1:30, 25, replace=TRUE)
+stripplot(~ x, jitter.data=TRUE, factor=.8, aspect=.5)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{With this synthetic dataset where several observations
+      can take the same value, jittering point locations on the
+      horizontal and vertical axes ensures a better representation.}}
+\end{figure}
 
-stripplot(~ rnorm(200), jitter.data = TRUE, factor = 0.8)
-stripplot(rnorm(30) ~ 1, horizontal=F,
-          scales=list(x=list(draw=FALSE)), xlab="")
+\begin{figure}[H]
+\begin{lstlisting}
+stripplot(~ x, jitter.data=TRUE, factor=.8, aspect="xy")
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{A better way of flattening the display is to use an
+      ``\texttt{xy}'' aspect.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+stripplot(x ~ 1, horizontal=FALSE, jitter.data=TRUE, aspect=1.2,
+          scales=list(x=list(draw=F)), xlab="", pch=15, alpha=.5)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{This is basically the same picture but the $x$ and $y$
+      axis have been transposed. We used a different symbol and
+      transparency to highlight where replication occurs in the
+      data. Obviously, that won't work so nicely with larger sample
+      size or a higher density of replication.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+stripplot(~ x, panel=HH::panel.dotplot.tb, cex=1.2, factor=.2)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{In contrast
+      to the base \texttt{stripchart} function, there is no way of
+      imposing a stacked display in \texttt{lattice}. However, there
+      is some convenient panel function in the \texttt{HH} package.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+x <- sample(seq(1, 60, by=2), 75, replace=TRUE)
+stripplot(1 ~ x, panel=panel.sunflowerplot, col="black", 
+          seg.col="black", seg.lwd=1, size=.08)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{With
+      possible replicates, it is also interesting to use
+      ``sunflowers'' where multiple leaves are used for each
+      duplicate. The custom panel function mimics the base
+      \texttt{sunflowerplot} function. For an alternative way of
+      embedding ``sunflowers'' into a \texttt{lattice} display, see
+      the following thread on R-help:
+      \url{http://r.789695.n4.nabble.com/Grid-graphics-issues-tp797307p797307.html}. Note
+    that we remove $y$-axis annotation using commands presented before
+  (i.e., using \texttt{scales=}).}}
+\end{figure}
 
 \section{Histograms}
 \begin{figure}[H]
@@ -401,36 +470,70 @@ histogram(~ x, type="density", border=NA,
 
 \section{Density plots}
 
+A reference textbook, \autocite{silverman86}.
+
 \begin{figure}[H]
 \begin{lstlisting}
 densityplot(~ waiting, data=faithful)
 \end{lstlisting}
-  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
-  {\caption*{}}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{The default
+      panel relies on \R's \texttt{density} function. As such, the
+      default kernel is \texttt{gaussian} with $n=512$ equally spaced
+      at which the density is estimated. The choice of the bandwith
+      follows Silverman's rule of thumb, namely
+      $\min(0.9\textrm{SD},\textrm{IQR}/1.34n)$. An alternative
+      bandwith can be selected using \texttt{bw="SJ"}.}}
 \end{figure}
 
 \begin{figure}[H]
 \begin{lstlisting}
 densityplot(~ waiting, data=faithful, plot.points="rug")
 \end{lstlisting}
-  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
-  {\caption*{}}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{Instead of
+      a mini stripchart displayed at $y=0$, a ``rugplot'' can be
+      preferred. It might help spotting possible local concentration
+      of data points, compared to simple jittered points.}}
 \end{figure}
 
 \begin{figure}[H]
 \begin{lstlisting}
 densityplot(~ waiting, data=faithful, plot.points=FALSE, ref=TRUE)
 \end{lstlisting}
-  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
-  {\caption*{}}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{Sometimes,
+      adding a reference line crossing at $y=0$ may be informative,
+      especially for multimodal distributions. It is advised to avoid
+      plotting individual observations like was done in the preceding
+      graphics.}}
 \end{figure}
 
+An alternative way of presenting density plots are so-called
+``violin plots''\autocite{hintze98} which feature the main components
+of a boxplot (\S~\ref{sec:boxplot}) and a kernel density estimation,
+and ``bean plots''\autocite{kampstra08} where density trace are
+mirrored to form a polygon shape. The latter presents the advantage of
+allowing asymmetrical plotting depending on a grouping factor.
 
-\section{Barcharts}
+\begin{figure}[H]
+\begin{lstlisting}
+bwplot(~ waiting, data=faithful, panel=panel.violin)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{A simple ``violin'' panel.}}
+\end{figure}
 
-\section{Dotcharts}
+\begin{figure}[H]
+\begin{lstlisting}
+bwplot(~ waiting, data=faithful, 
+       panel=function(..., box.ratio) {
+         panel.violin(..., col="transparent", varwidth=FALSE, 
+                      box.ratio=box.ratio)
+         panel.bwplot(..., fill=NULL, box.ratio=.15)})
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{A simple ``violin'' panel.}}
+\end{figure}
 
-\section{Quantile plots}
+\section{Quantile and related probability plots}
 
 
 \begin{figure}[H]
@@ -441,7 +544,10 @@ qqmath(~ rnorm(60), dist=qunif)
   {\caption*{A simple quantile plot (.}}
 \end{figure}
 
-\section{Boxplots}
+% ecdfplot
+% Tukey's Hanging Rootograms rootogram
+
+\section{Boxplots}\label{sec:boxplot}
 
 \begin{figure}[H]
 \begin{lstlisting}
@@ -549,6 +655,94 @@ xyplot(zoo(discoveries))
 \end{figure}
 
 
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(zoo(discoveries), panel=panel.xyarea)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{It is possible to add a shaded area by using a specific
+      panel function from the \texttt{latticeExtra} package.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xt <- ts(cumsum(rnorm(200 * 12)))
+p <- xyplot(xt)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{The \texttt{lattice} package works with \texttt{ts}
+      objetcs too.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xt <- zoo(accdeaths)
+xyplot(xt, type=c("l","g"), ylab="Total accidental deaths")
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{accdeaths}. A regular time series
+        giving the monthly totals of accidental deaths in the USA.}
+      Another regular time series is.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(xt,
+       panel=function(x, y, ...) {
+         panel.xyplot(x, y, ...)
+         panel.lines(rollmean(zoo(y, x), 3), lwd=2, col=1)
+       })
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{The same dataset with a rolling mean (of width 3).}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(xt) +
+  layer(panel.tskernel(x, y, c=3, col=1, lwd=2))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{Discrete symmetric smoothing kernels, available in
+      \texttt{latticeExtra}, can be used instead of a rolling
+      mean. Here an approximate gaussian filter was used to highlight
+      the seasonal component.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(ts.union(sunspot.year, lag10=lag(sunspot.year, 10)), 
+       superpose=TRUE, panel=panel.superpose,
+       panel.groups=function(..., group.number) {
+         if (group.number == 1) panel.xyarea(...)
+         else panel.xyplot(...)
+       }, border=NA, cut=list(n=3, overlap=0), aspect="xy",
+       par.settings=simpleTheme(col=c("grey","black"), lwd=c(5,2)))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{sunspot.year}. Yearly numbers of sunspots
+        between 1700 and 1988.} More complex arrangement can be done,
+      again with the \texttt{latticeExtra} panel function. Here,
+      yearly numbers of sunspots are shown together with a lagged
+      version (10 years).}}
+\end{figure}
+
+
+\begin{figure}[H]
+\begin{lstlisting}
+flow <- ts(filter(rlnorm(200, mean = 1), 0.8, method = "r"))
+xyplot(flow, 
+       panel=function(x, y, ...) {
+         panel.xblocks(x, y > mean(y), col="lightgray")
+         panel.xyplot(x, y, ...)
+       })
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{blabla blabla}}
+\end{figure}
+
+
+
 % --------------------------------------------------------------- Chapter 4 --
 \chapter{Two-way graphics}
 
@@ -593,7 +787,7 @@ xyplot(uptake ~ conc, data=CO2, groups=Treatment, type="a")
 
 
 
-\section{Scatterplots}
+\section{Scatterplots}\label{sec:scatterplot}
 The basic \R command for displaying a two-way scatterplot is
 \texttt{xyplot}. A command like \texttt{xyplot(y ~ x)} will produce a
 2D plot almost identical to what would be obtained using base
@@ -789,6 +983,32 @@ xyplot(dist ~ speed, data=cars, scales=list(alternating=3))
       left/bottom).}}
 \end{figure}
 
+\section{Barcharts}
+
+\begin{figure}[H]
+\begin{lstlisting}
+spray.df <- aggregate(count ~ spray, data=InsectSprays, FUN=mean)
+barchart(count ~ spray, data=spray.df)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{InsectSprays}. The counts of insects
+        in agricultural experimental units treated with different
+        insecticides.} Before using barchart with one continuous and
+      one categorical variable, we need to consider how to aggregate
+      data, in other words what summary measure to consider.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+barchart(spray ~ count, data=spray.df)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}} {\caption*{To reverse
+      $x$ and $y$ axis, we just need to use the exchange the
+      right-hand and left-hand side of the preceding formula.}}
+\end{figure}
+
+\section{Dotcharts}
+
 \section{Line fits}
 In this section, we discuss the addition of model fit to existing
 two-way graphics. For example, it may be interesting to show a
@@ -823,6 +1043,69 @@ xyplot(dist ~ speed, data=cars, type=c("p","r"))
       the \texttt{type=} argument.}}
 \end{figure}
 
+\section{Time series}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xt <- ts(matrix(cumsum(rnorm(200 * 12)), ncol=2))
+xyplot(xt)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{blabla blabla.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(xt, scales=list(y="same"), type=c("l","g"))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{blabla blabla.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(xt, layout=c(2,1))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{blabla blabla.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(EuStockMarkets, scales=list(y="same"))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{\marginnote{\textbf{EuStockMarkets}. Contains the daily
+        closing prices of major European stock indices: Germany DAX
+        (Ibis), Switzerland SMI, France CAC, and UK FTSE.  The data
+        are sampled in business time, i.e., weekends and holidays are
+        omitted.} blabla blabla.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+xyplot(EuStockMarkets, superpose=TRUE, auto.key=list(columns=2))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{blabla blabla.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+horizonplot(EuStockMarkets, colorkey=TRUE)
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{blabla blabla.}}
+\end{figure}
+
+\begin{figure}[H]
+\begin{lstlisting}
+horizonplot(EuStockMarkets, colorkey=TRUE) + infolayers
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{blabla blabla.}}
+\end{figure}
+
 % --------------------------------------------------------------- Chapter 5 --
 \chapter{Multi-way graphics}
 
@@ -842,6 +1125,9 @@ numerical variables across the levels of a third factor.
 
 % --------------------------------------------------------------- Chapter 6 --
 \chapter{Customizing theme and panels}
+
+% stem and leaf plot
+% stripplot with stack=TRUE
 
 \chapter{Interactive and dynamic displays}
 
