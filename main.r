@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 
-# Time-stamp: <2012-01-16 11:41:17 chl>
+# Time-stamp: <2012-01-17 17:12:38 chl>
 
 #
 # R script to generate figures from vizRguide.tex.
@@ -8,11 +8,33 @@
 
 library(lattice)
 library(latticeExtra)
+source("panels.r")
 set.seed(101)
 
 trellis.device(device="cairo_pdf", theme=custom.theme.2())
 cairo_pdf("figs_lattice.pdf", onefile=TRUE, family="Myriad Sans",
           height=5, width=5)
+
+
+x <- sample(1:30, 25, replace=TRUE)
+p <- stripplot(~ x, jitter.data=TRUE, factor=.8, aspect=.5)
+print(p)
+
+p <- stripplot(~ x, jitter.data=TRUE, factor=.8, aspect="xy")
+print(p)
+
+p <- stripplot(x ~ 1, horizontal=FALSE, jitter.data=TRUE, aspect=1.2,
+               scales=list(x=list(draw=FALSE)), xlab="", pch=15, alpha=.5)
+print(p)
+
+p <- stripplot(~ x, panel=HH::panel.dotplot.tb, cex=1.2, factor=.2)
+print(p)
+
+x <- sample(seq(1, 60, by=2), 75, replace=TRUE)
+p <- stripplot(1 ~ x, panel=panel.sunflowerplot, col="black", 
+               seg.col="black", seg.lwd=1, size=.08,
+               scales=list(y=list(draw=FALSE)), ylab="")
+print(p)
 
 p <- histogram(~ waiting, data=faithful)
 print(p)
@@ -39,6 +61,17 @@ p <- densityplot(~ waiting, data=faithful, plot.points="rug")
 print(p)
 
 p <- densityplot(~ waiting, data=faithful, plot.points=FALSE, ref=TRUE)
+print(p)
+
+p <- bwplot(~ waiting, data=faithful, panel=panel.violin)
+print(p)
+
+p <- bwplot(~ waiting, data=faithful, 
+            panel=function(..., box.ratio) {
+              panel.violin(..., col="transparent", varwidth=FALSE, 
+                           box.ratio=box.ratio)
+              panel.bwplot(..., fill=NULL, box.ratio=.15)
+            })
 print(p)
 
 p <- qqmath(~ rnorm(60))
@@ -78,6 +111,49 @@ library(zoo)
 p <- xyplot(zoo(discoveries))
 print(p)
 
+p <- xyplot(zoo(discoveries), panel=panel.xyarea)
+print(p)
+
+xt <- ts(cumsum(rnorm(200 * 12)))
+p <- xyplot(xt)
+print(p)
+
+xt <- zoo(accdeaths)
+p <- xyplot(xt, type=c("l","g"), ylab="Total accidental deaths")
+print(p)
+
+p <- xyplot(xt,
+            panel=function(x, y, ...) {
+              panel.xyplot(x, y, ...)
+              panel.lines(rollmean(zoo(y, x), 3), lwd=2, col=1)
+            })
+print(p)
+
+p <- xyplot(xt) +
+  layer(panel.tskernel(x, y, c=3, col=1, lwd=2))
+print(p)
+
+p <- xyplot(ts.union(sunspot.year, lag10=lag(sunspot.year, 10)), 
+            superpose=TRUE, panel=panel.superpose,
+            panel.groups=function(..., group.number) {
+              if (group.number == 1) panel.xyarea(...)
+              else panel.xyplot(...)
+            }, border=NA, cut = list(n=3, overlap=0), aspect="xy",
+            par.settings=simpleTheme(col=c("grey","black"), lwd=c(5,2)))
+print(p)
+
+flow <- ts(filter(rlnorm(200, mean = 1), 0.8, method = "r"))
+p <- xyplot(flow, 
+            panel=function(x, y, ...) {
+              panel.xblocks(x, y > mean(y), col="lightgray")
+              panel.xyplot(x, y, ...)
+            })
+print(p)
+
+## xt <- ts(cumsum(rnorm(12)), frequency=12, start=c(2010, 1))
+## xd <- as.Date("2010-01-01") + as.numeric(time(xt))
+## xyplot(xt ~ xd, type="l") + layer_(panel.xblocks(x, months))
+       
 p <- xyplot(uptake ~ conc, data=CO2, groups=Treatment, type="a")
 print(p)
 
@@ -132,6 +208,13 @@ print(p)
 p <- xyplot(dist ~ speed, data=cars, scales=list(alternating=3))
 print(p)
 
+spray.df <- aggregate(count ~ spray, data=InsectSprays, FUN=mean)
+p <- barchart(count ~ spray, data=spray.df)
+print(p)
+
+p <- barchart(spray ~ count, data=spray.df)
+print(p)
+
 p <- xyplot(dist ~ speed, data=cars, type=c("p","smooth"))
 print(p)
 
@@ -139,6 +222,35 @@ p <- xyplot(dist ~ speed, data=cars, type=c("p","smooth"), span=1/3)
 print(p)
 
 p <- xyplot(dist ~ speed, data=cars, type=c("p","r"))
+print(p)
+
+xt <- ts(matrix(cumsum(rnorm(200 * 12)), ncol=2))
+p <- xyplot(xt)
+print(p)
+
+p <- xyplot(xt, scales=list(y="same"), type=c("l","g"))
+print(p)
+
+p <- xyplot(xt, layout=c(2,1))
+print(p)
+
+p <- xyplot(EuStockMarkets, scales=list(y="same"))
+print(p)
+
+p <- xyplot(EuStockMarkets, superpose=TRUE, auto.key=list(columns=2))
+print(p)
+
+p <- horizonplot(EuStockMarkets, colorkey=TRUE)
+print(p)
+
+infolayers <-
+  layer(panel.scaleArrow(x = 0.99, digits = 1, col = "grey",
+                         srt = 90, cex = 0.7)) +
+  layer(lim <- current.panel.limits(),
+        panel.text(lim$x[1], lim$y[1], round(lim$y[1],1), font = 2,
+                   cex = 0.7, adj = c(-0.5,-0.5), col = "#9FC8DC"))
+
+p <- horizonplot(EuStockMarkets, colorkey=TRUE) + infolayers
 print(p)
 
 dev.off()
