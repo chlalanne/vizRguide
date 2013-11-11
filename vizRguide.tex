@@ -1,4 +1,4 @@
-% Time-stamp: <2012-02-16 12:28:30 chl>
+% Time-stamp: <2013-11-11 12:47:38 chl>
 
 %
 % Here is a temptative textbook on R graphics with the lattice package.
@@ -29,8 +29,27 @@
 % To handle illustrated code chunks, I'm using a combination of the
 % following two packages:
 \usepackage{caption}
+\usepackage{subfig}
 \usepackage{floatrow}
+
+% \makeatletter\@mparswitchfalse\makeatother
+% \DeclareMarginSet{hangleft}%
+% {\setfloatmargins
+%   {\hskip-\marginparwidth\hskip-\marginparsep}{\hfil}}
+% \DeclareColorBox{framedfigure}{\fcolorbox{gray}{white}}
+
 \floatsetup[figure]{facing=yes,capbesideposition={top,inside},capbesidesep=quad}
+\floatsetup[widefloat]{margins=hangoutside,
+                       %captionskip=3pt,
+                       %framestyle=colorbox,framefit=yes,
+                       %colorframeset=framedfigure,
+                       %frameset={\fboxrule3pt\fboxsep8pt},
+                       %framestyle=fbox,framearound=row,
+                       %frameset={\fboxrule1pt\fboxsep10pt},
+                       style=plaintop}
+\captionsetup[widefloat]{justification=RaggedRight,name=Box,skip=15pt,
+                         font={sf},labelfont={normalsize,sf,bf},
+                         labelsep=newline,strut=no}
 
 % and this is to avoid leaving too much blank between adjacent floats
 \setlength{\floatsep}{1.25\baselineskip plus 3pt minus 2pt}
@@ -71,6 +90,7 @@
 \newcounter{fig}
 \setcounter{fig}{1}
 \newcommand{\img}[1]{\includegraphics[page={\value{fig}},width=2in]{#1}\stepcounter{fig}}
+\newcommand{\simg}[1]{\includegraphics[page={\value{fig}},width=1.5in]{#1}\stepcounter{fig}}
 
 % Version control
 \immediate\write18{sh ./vc}
@@ -83,8 +103,10 @@
 
 % Setup for XeLaTeX
 \usepackage{fontspec,xltxtra,xunicode}
+\usepackage{unicode-math}
 \defaultfontfeatures{Scale=MatchLowercase}
 \setromanfont[Mapping=tex-text]{Minion Pro} 
+\setmathfont{Asana Math} 
 \setsansfont[Mapping=tex-text]{Myriad Pro} 
 \setmonofont[Scale=0.91]{Inconsolata}
 \newfontfamily{\titlefont}[Scale=1.4]{Fertigo Pro}
@@ -109,8 +131,8 @@
    morekeywords={data.frame,within,as.numeric,cut,xyplot,histogram,%
                  groups,breaks,include.lowest,with,pch,panel.xyplot,%
                  replicate,alpha,colorRampPalette,jitter.x,amount,%
-                 panel.rug,brewer.pal,rgb,jitter.y,Hmisc::describe,%
-                 Hmisc::summary.formula,type,scales,xscale.components,%
+                 panel.rug,brewer.pal,rgb,jitter.y,describe,%
+                 summary.formula,type,scales,xscale.components,%
                  yscale.components,xscale.components.log10.3,%
                  yscale.components.log10.3,box.ratio,limits,at,%
                  panel.bwplot,panel.points,cex,zoo,plot.points,%
@@ -124,7 +146,8 @@
                  rollmean,number,strip,strip.left,filter,panel.xblocks,%
                  method,auto.key,columns,horizonplot,colorkey,qqmath,%
                  ecdfplot,dist,f.value,FUN,barchart,lty,panel.average,%
-                 fun,col.regions,rot}, 
+                 fun,col.regions,rot,scale,relevel,cut2,as.character,%
+                 adj,panel.text}, 
    deletekeywords={*,/,gaussian,count}}
 \lstset{language=Renhanced,
 	format=tilde,
@@ -140,6 +163,7 @@
    	index=[1][keywords], 
    	indexstyle=\indexfoo} 
 \newcommand{\indexfoo}[1]{\index{#1@\textcolor{grey30}{\tt #1}}} 
+%\lstalias{Rcap}{Renhanced}
 \makeatletter
 \lst@AddToHook{TextStyle}{\let\lst@basicstyle\normalsize\ttfamily}
 \makeatother
@@ -149,6 +173,9 @@
 % it is handy at some point. The rest is purely to avoid typing the
 % same text repetitively.
 \renewcommand{\texttt}[1]{\lstinline{#1}}
+%\makeatletter
+%\lst@AddToHook{Rcap}{\let\lst@basicstyle\small}
+%\makeatother
 \newcommand{\R}{\textsf{R}\xspace}
 \newcommand{\mytilde}{\textcolor{myred3}{$\sim$}\xspace}
 
@@ -193,8 +220,9 @@
 \vspace*{\baselineskip}
 {\Large\textsf{Christophe Lalanne}}\\[0.167\txtheight]
 {\Large\titlefont A Visual Guide to}\\[\baselineskip]
-{\textcolor{Medium}{\Huge\titlefont R Graphics}}\\[\baselineskip]
-{\tiny\titlefont With 123 illustrations}\par
+{\textcolor{Medium}{\Huge\titlefont R Graphics and}}\\[\baselineskip]
+{\textcolor{Medium}{\Huge\titlefont Data Munging}}\\[\baselineskip]
+{\tiny\titlefont With 65 illustrations}\par
 \vfill
 {\includegraphics[scale=.75]{logo}\\{\small \tt \GITAbrHash}\\{\small
     \tt \VCDateTEX}}\par 
@@ -256,7 +284,7 @@ anything, except the title.)
 
 The above example shows one important aspect of using a dedicated
 statistical package: \textsf{Gnuplot} has no function to draw an
-histogram, and we have to write soem code to perform additional tasks,
+histogram, and we have to write some code to perform additional tasks,
 like binning in this case. The same applies for
 \textsf{plotutils}. We could make use of external programs to do that,
 like the \textsf{GSL} library (see example~22.11 from the manual,
@@ -270,7 +298,7 @@ graphical capabilities\autocite{mitchell08}.
 
 \section{The \R graphical model}
 
-\section{Base vs. \texttt{lattice} graphics}
+\section{Base vs. {\tt lattice} graphics}
 
 \section{The grammar of graphics}
 
@@ -359,7 +387,7 @@ birthwt <- transform(birthwt, ptl.yn=factor(ptl > 0, labels=c("No","Yes")),
 If there is some reason to treat \texttt{ftv} as an ordered factor,
 a command like
 \begin{verbatim}
-as.ordered(Hmisc::cut2(birthwt$ftv, c(0, 1, 2, 6)))
+as.ordered(cut2(birthwt$ftv, c(0, 1, 2, 6)))
 \end{verbatim}
 might do the job. (This would also be possible with the base
 \texttt{cut} function, but the one in
@@ -377,11 +405,11 @@ levels of two explanatory variables in the low birth dataset.
 \section{Summarizing data}
 Statisticians generally spend a great part of their time in data
 cleansing, data transformation or re-expression\autocite{hoaglin83},
-and data visualization. There are numerous \R functions that will
-facilitate the task of data checking (\texttt{Hmisc::describe}
-provides ``codebook'' facilities), summarizing data (\texttt{summary},
-\texttt{Hmisc::summary.formula}), aggregating data (\texttt{tapply},
-\texttt{aggregate}). 
+and data visualization. The \texttt{Hmisc} package includes numerous
+\R functions that will facilitate the task of data checking
+(\texttt{describe} provides ``codebook'' facilities), summarizing
+(\texttt{summary.formula}) or aggregating data,
+(\texttt{summary.formula}).
 
 The \texttt{plyr} package\autocite{wickham11} offers a general
 solution to those kind of tasks.
@@ -452,10 +480,9 @@ stripplot(1 ~ x, panel=panel.sunflowerplot, col="black",
       duplicate. The custom panel function mimics the base
       \texttt{sunflowerplot} function. For an alternative way of
       embedding ``sunflowers'' into a \texttt{lattice} display, see
-      the following thread on R-help:
-      \url{http://r.789695.n4.nabble.com/Grid-graphics-issues-tp797307p797307.html}. Note
-    that we remove $y$-axis annotation using commands presented before
-  (i.e., using \texttt{scales=}).}}
+      the following thread on R-help: \url{http://bit.ly/Ig4RTq}. Note
+      that we remove $y$-axis annotation using commands presented
+      before (i.e., using \texttt{scales=}).}}
 \end{figure}
 
 \section{Histograms}
@@ -473,22 +500,51 @@ histogram(~ waiting, data=faithful)
       forgetting the \mytilde operator will raise an error message.}}
 \end{figure}
 
-\begin{figure}[H]
-\begin{lstlisting}
-histogram(~ waiting, data=faithful, type="count")
-\end{lstlisting}
-  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
-  {\caption*{Same as above but with counts instead of density.}}
-\end{figure}
+Box~\ref{box:histogram} shows some custom settings with the
+\texttt{faithful} dataset.
+\lipsum[1]
+
+\begin{figure*}[h]\fboxsep-.4pt
+\ffigbox{}{\CommonHeightRow{\begin{subfloatrow}[4]
+\ffigbox[\FBwidth]
+{\simg{figs_lattice-crop}}{\caption*{\texttt{type="count"}}}
+\ffigbox[\FBwidth]
+{\simg{figs_lattice-crop}}{\caption*{\texttt{col="steelblue"}}}
+\ffigbox[\FBwidth]
+{\simg{figs_lattice-crop}}{\caption*{\texttt{border=NA,
+      nint=12}}}
+\ffigbox[\FBwidth]
+{\simg{figs_lattice-crop}}{\caption*{\texttt{nint=nrow(dataset)}}}
+\end{subfloatrow}}
+{\caption{Common options for \texttt{histogram} include displaying
+    counts instead of percents, or varying bar color. It is also
+    possible to change default bin size. When
+    \texttt{nint=nrow(dataset)}, we have a so-called high-density
+    vertical lines, much like when using \texttt{plot(...,
+      type="h")}.}\label{box:histogram}}} 
+\end{figure*}
+
 
 \begin{figure}[H]
 \begin{lstlisting}
-histogram(~ waiting, data=faithful, border=NA, nint=12)
+p <- histogram(~ waiting, data=faithful, lwd=5, type="percent", 
+               border="white")
+x.breaks <- p$panel.args.common$breaks
+y.values <- table(cut(faithful$waiting, breaks=x.breaks))
+update(p, panel=function(...) {
+  panel.histogram(...)
+  panel.text(x.breaks+diff(x.breaks)[1]/2, 
+             y.values/nrow(faithful)*100,
+             as.character(y.values), cex=.8, adj=c(.5,0))
+})
 \end{lstlisting}
   \fcapside[\FBwidth] {\img{figs_lattice-crop}}
-  {\caption*{Using a finer grid size and removing the borders. (To
-      remove all colors, use \texttt{col=NULL}.)}}
+  {\caption*{The following example demonstrates how a default
+      histogram displaying percent data can be annotated with counts
+      data. This is intended to show how we can steal away default
+      setting to display the distribution of discrete values.)}}
 \end{figure}
+
 
 \begin{figure}[H]
 \begin{lstlisting}

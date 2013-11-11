@@ -1,20 +1,23 @@
 #! /usr/bin/env Rscript
 
-# Time-stamp: <2012-01-17 17:12:38 chl>
+# Time-stamp: <2012-04-27 17:26:02 chl>
 
 #
 # R script to generate figures from vizRguide.tex.
 #
+# This script is intended to be called from a shell script
+# which will set the appropriate locale (en_US.UTF8).
+# 
 
 library(lattice)
 library(latticeExtra)
+library(RColorBrewer)
 source("panels.r")
 set.seed(101)
 
 trellis.device(device="cairo_pdf", theme=custom.theme.2())
 cairo_pdf("figs_lattice.pdf", onefile=TRUE, family="Myriad Sans",
           height=5, width=5)
-
 
 x <- sample(1:30, 25, replace=TRUE)
 p <- stripplot(~ x, jitter.data=TRUE, factor=.8, aspect=.5)
@@ -42,7 +45,25 @@ print(p)
 p <- histogram(~ waiting, data=faithful, type="count")
 print(p)
 
+p <- histogram(~ waiting, data=faithful, border="white", col="steelblue")
+print(p)
+
 p <- histogram(~ waiting, data=faithful, border=NA, nint=12)
+print(p)
+
+p <- histogram(~ waiting, data=faithful[sample(1:nrow(faithful), 80),],
+               nint=80, border=NA, lwd=2)
+print(p)
+
+p <- histogram(~ waiting, data=faithful, lwd=5, type="percent",
+               border="white")
+x.breaks <- p$panel.args.common$breaks
+y.values <- table(cut(faithful$waiting, breaks=x.breaks))
+p <- update(p, panel=function(...) {
+  panel.histogram(...)
+  panel.text(x.breaks+diff(x.breaks)[1]/2, y.values/nrow(faithful)*100,
+             as.character(y.values), cex=.8, adj=c(.5,0))
+})
 print(p)
 
 x <- rnorm(80, mean=12, sd=2)
@@ -75,6 +96,20 @@ p <- bwplot(~ waiting, data=faithful,
 print(p)
 
 p <- qqmath(~ rnorm(60))
+print(p)
+
+x <- rt(500, df=20)
+p <- qqmath(~ x, pch="+", abline=c(0,1), dist=qnorm)
+print(p)
+
+p <- qqmath(~ x, pch="+", abline=c(0,1), dist=qnorm,
+            f.value=ppoints(100))
+print(p)
+
+p <- qqmath(~ Hwt, data=cats, subset=Sex == "F", dist=qunif)
+print(p)
+
+p <- ecdfplot(~ Hwt, data=cats, subset=Sex == "F")
 print(p)
 
 p <- bwplot(~ height, data=women)
@@ -178,7 +213,6 @@ p <- xyplot(V1 ~ V2, data=xy, pch=19, alpha=.5)
 print(p)
 
 dat <- data.frame(replicate(2, rnorm(500)), z=sample(0:40, 500, T))
-library(RColorBrewer)
 cols <- colorRampPalette(brewer.pal(11, "RdBu"))(diff(range(dat$z)))
 p <- xyplot(X1 ~ X2, data=dat, col=cols[dat$z], pch=19, alpha=.5)
 print(p)
@@ -213,6 +247,15 @@ p <- barchart(count ~ spray, data=spray.df)
 print(p)
 
 p <- barchart(spray ~ count, data=spray.df)
+print(p)
+
+p <- dotplot(spray ~ count, data=InsectSprays)
+print(p)
+
+p <- dotplot(spray ~ count, data=InsectSprays, lty=2)
+print(p)
+
+p <- dotplot(spray ~ count, data=InsectSprays, type=c("p","a"))
 print(p)
 
 p <- xyplot(dist ~ speed, data=cars, type=c("p","smooth"))
@@ -252,5 +295,16 @@ infolayers <-
 
 p <- horizonplot(EuStockMarkets, colorkey=TRUE) + infolayers
 print(p)
+
+data(Harman23.cor)
+p <- levelplot(Harman23.cor$cov, scales=list(x=list(rot=45)), 
+               xlab="", ylab="")
+print(p)
+
+cols <- colorRampPalette(brewer.pal(8, "RdBu"))
+p <- levelplot(Harman23.cor$cov, scales=list(x=list(rot=45)), 
+               xlab="", ylab="", col.regions=cols)
+print(p)
+
 
 dev.off()
