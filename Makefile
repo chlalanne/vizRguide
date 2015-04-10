@@ -1,7 +1,7 @@
 all:
 	pdfcrop figs_lattice.pdf
 	xelatex vizRguide
-	bibtex vizRguide
+	biber vizRguide
 	makeindex vizRguide
 	xelatex vizRguide
 	xelatex vizRguide
