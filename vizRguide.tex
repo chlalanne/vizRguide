@@ -1,4 +1,4 @@
-% Time-stamp: <2015-04-10 12:42:35 chl>
+% Time-stamp: <2015-04-10 15:52:39 chl>
 
 %
 % Here is a temptative textbook on R graphics with the lattice package.
@@ -126,6 +126,7 @@
 \definecolor{dandelion}{rgb}{.94,.88,.19}
 \definecolor{peach}{rgb}{.996,.851,.723}
 \definecolor{tan}{rgb}{.82,.70,.55}
+\definecolor{periwinkle}{rgb}{.80,.80,1}
 
 
 
@@ -511,28 +512,82 @@ birthwt <- transform(birthwt, ptl.yn=factor(ptl > 0, labels=c("No","Yes")),
                      ftv.c=factor(ifelse(ftv < 2, "1", "2+")))
 \end{verbatim}
 
+\texttt{Hmisc} provides a replacement for R's \texttt{cut} function with
+better default options (especially the infamous \texttt{include.lowest =
+  FALSE}) to discretize a continuous variable. The \texttt{cut2} function
+has many useful options, including \texttt{g=} and \texttt{levels.mean=} to
+return $g$ classes and report center of each class instead of class
+intervals:
+\begin{verbatim}
+table(cut2(birthwt$age, g = 3, levels.mean = TRUE, digits = 3))
+\end{verbatim}
+
 If there is some reason to treat \texttt{ftv} as an ordered factor,
 a command like
 \begin{verbatim}
 as.ordered(cut2(birthwt$ftv, c(0, 1, 2, 6)))
 \end{verbatim}
-might do the job. (This would also be possible with the base
-\texttt{cut} function, but the one in
-\texttt{Hmisc}\autocite{harrell11} has better default options and it
-is more flexible.)
+might do the job.
 
 \section{Indexing, subsetting, conditioning}
 A lot of statistical operations that practictioners use to apply on a
 given dataset are mostly variations around the idea of indexing or
-subsetting. 
+subsetting. By comparison, SQL-like operations would be selection and
+projection. 
 
-We have already seen an example of indexing when we recoded factor
-levels of two explanatory variables in the low birth dataset.
+% FIXME: add more details here
+
+The \texttt{subset} command offers a simple and elegant way to combine both
+operations: for a given data frame, the \texttt{subset =} option is used to
+filter rows according to logical expression or simple row indexes while the
+\texttt{select =} option is used to return only selected variables based on
+their index (e.g., column 1 and 3) or an unquoted name (e.g.,
+\texttt{c(low,lwt)}). 
+
+The following instruction will print the age of hypertensive mothers whose
+baby was underweight:
+\begin{verbatim}
+subset(birthwt, low == "Yes" & ht == "Yes", age)
+\end{verbatim}
+It should be noted that \texttt{subset} returns a data frame.
+
+Some people might prefer to use their favorite SQL-like language, so
+something like this would perfectly fit their needs:
+\begin{verbatim}
+library(sqldf)
+sqldf("SELECT age FROM birthwt WHERE low = 0 AND ht = 1 LIMIT 3", row.names = TRUE)
+\end{verbatim}
+
+Unfortunately, this doesn't work with ``labelled'' objects, as typically
+returned by \texttt{Hmisc}, although a solution is readily available at \url{http://stackoverflow.com/q/2394902/420055}.
 
 \section{Summarizing data}
 Statisticians generally spend a great part of their time in data
 cleansing, data transformation or re-expression\autocite{hoaglin83},
 and data visualization. 
+
+\subsection{Base R functions}
+Both the \texttt{by} and \texttt{tapply} function allow to apply a builtin
+or custom function to help summarizing a numeric variable by a categorical
+variable. Most of the time, these two functions are less handy than
+\texttt{aggregate} since the latter offers a formula interface and returns a
+data frame. 
+
+\begin{verbatim}
+aggregate(bwt ~ ui + I(ftv > 1), data = birthwt, mean)
+\end{verbatim}
+
+There is, however, one caveat when using \texttt{aggregate}: even if you can pass a
+custom function that returns multiple values that can be printed on screen,
+the resulting data frame will still have only one column for its output. For
+exemple, the dimensions of the data frame created by the following call to
+\texttt{aggregate} is 4 by 3, even if it looks like there two separate
+columns for \texttt{bwt} mean and SD.
+
+\begin{verbatim}
+f <- function(x) c(mean = mean(x), sd = sd(x))
+aggregate(bwt ~ ui + I(ftv > 1), data = birthwt, f)
+\end{verbatim}
 
 
 \subsection{The \texttt{Hmisc} package}
@@ -1092,7 +1147,10 @@ xyplot(dist ~ speed, data=cars, pch=rbinom(nrow(cars), 1, .5)+1)
       the \texttt{panel.xyplot} function that acts as the default
       panel function. Note that the vector of symbols should have the
       same length as the $x$ and $y$ components, otherwise recycling
-      occurs.}}
+      occurs. It is, however, not a good idea to manipulate the
+      \texttt{pch=} (or \texttt{col=}, see below) argument, and it is better
+    to rely on the \texttt{par.settings=} parameter since it allows to use
+    custom themes which will facilitate the display of legend.}}
 \end{figure}
 
 
@@ -1462,7 +1520,62 @@ numerical variables across the levels of a third factor.
 % stem and leaf plot
 % stripplot with stack=TRUE
 
-% --------------------------------------------------------------- Chapter 7 --
+% --------------------------------------------------------------- Chapter 8 --
+\chapter{The Hmisc plotting functions}
+\addthumb{Hmisc graphics}{\Large\textsf{Hmisc}}{white}{periwinkle}
+
+\section{Two-way graphics}
+
+\texttt{Hmisc} provides automatic labelling of curves or levels of grouping
+factor, which are used as in standard lattice graphics (\texttt{groups=}),
+without the need to rely on the \texttt{directlabels} package. 
+
+Let us assume that we defined the following helper functions to compute
+standard error of a mean and the corresponding 95\% confidence interval:
+\begin{verbatim}
+se <- function(x) sd(x)/sqrt(length(x))
+f <- function(x) c(mean = mean(x), 
+                  lwr = mean(x) - 1.96 * se(x), 
+                  upr = mean(x) + 1.96 * se(x))
+\end{verbatim}
+
+% FIXME: segplot
+
+\begin{figure}[H]
+\begin{lstlisting}
+d <- with(birthwt, summarize(bwt, race, f))
+xYplot(Cbind(bwt, lwr, upr) ~ numericScale(race, label = "Ethnicity"), 
+       data = d, type = "b", keys = "lines", 
+       ylim = range(apply(d[, 3:4], 2, range)) + c(-1,1) * 100, 
+       scales = list(x = list(at = 1:3, labels = levels(d$race))))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{The \texttt{race} variable needs to be converted to a numerical
+      variable for proper scaling on the $x$-axis. Note that labeling of the
+      $x$-axis can be done at the same time. The \texttt{keys=} argument
+      controls the type of drawing, while \texttt{type=} behaves similarly
+      to the \texttt{lattice} plotting parameter.}} 
+\end{figure}
+
+
+Here is another example using a grouping factor.
+
+\begin{figure}[H]
+\begin{lstlisting}
+d <- with(birthwt, summarize(bwt, llist(race, smoke), f))
+xYplot(Cbind(bwt, lwr, upr) ~ numericScale(race), groups = smoke, 
+       data = d, type = "l", keys = "lines", method = "alt bars", 
+       ylim = c(2200, 3600), 
+       scales = list(x = list(at = 1:3, labels = levels(d$race))))
+\end{lstlisting}
+  \fcapside[\FBwidth] {\img{figs_lattice-crop}}
+  {\caption*{bla bla.}} 
+\end{figure}
+
+\begin{verbatim}
+\end{verbatim}
+
+% --------------------------------------------------------------- Chapter 8 --
 \chapter{The ggplot2 package}
 \addthumb{Ggplot graphics}{\Large\textsf{Ggplot}}{white}{tan}
 

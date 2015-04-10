@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 
-# Time-stamp: <2012-04-27 17:26:02 chl>
+# Time-stamp: <2015-04-10 15:36:06 chl>
 
 #
 # R script to generate figures from vizRguide.tex.
@@ -9,6 +9,7 @@
 # which will set the appropriate locale (en_US.UTF8).
 # 
 
+library(MASS)
 library(lattice)
 library(latticeExtra)
 library(RColorBrewer)
@@ -304,6 +305,24 @@ print(p)
 cols <- colorRampPalette(brewer.pal(8, "RdBu"))
 p <- levelplot(Harman23.cor$cov, scales=list(x=list(rot=45)), 
                xlab="", ylab="", col.regions=cols)
+print(p)
+
+source("./birthwt.r")
+
+se <- function(x) sd(x)/sqrt(length(x))
+f <- function(x) c(mean = mean(x), lwr = mean(x) - se(x), upr = mean(x) + se(x))
+
+
+d <- with(birthwt, summarize(bwt, race, f))
+p <- xYplot(Cbind(bwt, lwr, upr) ~ numericScale(race, label = "Ethnicity"), data = d, 
+           type = "b", keys = "lines", ylim = range(apply(d[, 3:4], 2, range)) + c(-1, 
+        1) * 100, scales = list(x = list(at = 1:3, labels = levels(d$race))))
+print(p)
+
+d <- with(birthwt, summarize(bwt, llist(race, smoke), f))
+p <- xYplot(Cbind(bwt, lwr, upr) ~ numericScale(race), groups = smoke, data = d, 
+       type = "l", keys = "lines", method = "alt bars", ylim = c(2200, 3600), 
+       scales = list(x = list(at = 1:3, labels = levels(d$race))))
 print(p)
 
 
