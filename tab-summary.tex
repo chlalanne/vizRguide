@@ -1,0 +1,11 @@
+%latex.default(cstats, title = title, caption = caption, rowlabel = rowlabel,     col.just = col.just, numeric.dollar = FALSE, insert.bottom = legend,     rowname = lab, dcolumn = dcolumn, extracolheads = extracolheads,     extracolsize = Nsize, ...)%
+\ctable[pos=!tbp,]{lrcccc}{\tnote[]{\noindent {\scriptsize $a$\ }{$b$\ }{\scriptsize $c$\ } represent the lower quartile $a$, the median $b$, and the upper quartile $c$\ for continuous variables.}\tnote[]{$N$\ is the number of non--missing values.}\tnote[]{Numbers after percents are frequencies.}\tnote[]{\indent Tests used:}\tnote[]{\textsuperscript{\normalfont 1}Pearson test; \textsuperscript{\normalfont 2}Wilcoxon test}}{\FL
+\multicolumn{1}{l}{}&\multicolumn{1}{c}{N}&\multicolumn{1}{c}{No}&\multicolumn{1}{c}{Yes}&\multicolumn{1}{c}{Combined}&\multicolumn{1}{c}{Test Statistic}\NN
+&&\multicolumn{1}{c}{{\scriptsize $N=130$}}&\multicolumn{1}{c}{{\scriptsize $N=59$}}&\multicolumn{1}{c}{{\scriptsize $N=189$}}&\ML
+race~:~White&189&56\%~{\scriptsize~(73)}&39\%~{\scriptsize~(23)}&51\%~{\scriptsize~(96)}&$ \chi^{2}_{2}=5 ,~ P=0.08 ^{1} $\NN
+~~~~Black&&12\%~{\scriptsize~(15)}&19\%~{\scriptsize~(11)}&14\%~{\scriptsize~(26)}&\NN
+~~~~Other&&32\%~{\scriptsize~(42)}&42\%~{\scriptsize~(25)}&35\%~{\scriptsize~(67)}&\NN
+Mother~age~\hfill\tiny{years}&188&{\scriptsize 19~}{23 }{\scriptsize 28} &{\scriptsize 20~}{22 }{\scriptsize 25} &{\scriptsize 19~}{23 }{\scriptsize 26} &$ F_{1,186}=1 ,~ P=0.2 ^{2} $\NN
+ui~:~No&189&89\%~{\scriptsize~(116)}&76\%~{\scriptsize~(~45)}&85\%~{\scriptsize~(161)}&$ \chi^{2}_{1}=5 ,~ P=0.02 ^{1} $\NN
+~~~~Yes&&11\%~{\scriptsize~(~14)}&24\%~{\scriptsize~(~14)}&15\%~{\scriptsize~(~28)}&\LL
+}

@@ -1,4 +1,4 @@
-% Time-stamp: <2015-04-10 15:52:39 chl>
+% Time-stamp: <2015-04-10 17:56:40 chl>
 
 %
 % Here is a temptative textbook on R graphics with the lattice package.
@@ -26,6 +26,9 @@
 
 % Use margin note
 \usepackage{marginnote}
+
+% Hmisc Tables
+\usepackage{ctable,setspace,relsize}
 
 % To handle illustrated code chunks, I'm using a combination of the
 % following two packages:
@@ -156,7 +159,9 @@
                  method,auto.key,columns,horizonplot,colorkey,qqmath,%
                  ecdfplot,dist,f.value,FUN,barchart,lty,panel.average,%
                  fun,col.regions,rot,scale,relevel,cut2,as.character,%
-                 adj,panel.text}, 
+                 adj,panel.text,bystats,bystats2,summarize,summary.formula,%
+                 colMeans,mApply,cut2,as.data.frame,matrix2dataFrame,%
+                 impute,transcan,aregImpute,select}, 
    deletekeywords={*,/,gaussian,count}}
 \lstset{language=Renhanced,
 	format=tilde,
@@ -561,6 +566,23 @@ sqldf("SELECT age FROM birthwt WHERE low = 0 AND ht = 1 LIMIT 3", row.names = TR
 Unfortunately, this doesn't work with ``labelled'' objects, as typically
 returned by \texttt{Hmisc}, although a solution is readily available at \url{http://stackoverflow.com/q/2394902/420055}.
 
+% FIXME: should be moved in a dedicated subsection?
+There are also a bunch of command dedicated to variables clustering,
+analysis of missing patterns, or simple (\texttt{impute}) or multiple
+(\texttt{aregImpute}, \texttt{transcan}) imputation methods. Here is how we
+would impute missing values with the median in the case of a continuous
+variable:
+\begin{verbatim}
+lwt <- birthwt$lwt
+lwt[sample(length(lwt), 10)] <- NA
+lwt.i <- impute(lwt)
+summary(lwt.i)
+\end{verbatim}
+
+Missing observations will be marked with an asterisk when we print the whole
+object in R. To use the mean instead of the median, we just have to add the
+\texttt{fun = mean} option.
+
 \section{Summarizing data}
 Statisticians generally spend a great part of their time in data
 cleansing, data transformation or re-expression\autocite{hoaglin83},
@@ -591,6 +613,213 @@ aggregate(bwt ~ ui + I(ftv > 1), data = birthwt, f)
 
 
 \subsection{The \texttt{Hmisc} package}
+
+There are three useful commands that provide summary statistics for a list
+of variables. They implement the ``split-apply-combine''
+strategy\autocite{wickham11} in the spirit of R's built-in functions (unlike
+\texttt{plyr}). 
+
+The first one, \texttt{summarize}, can be seen as an equivalent to R's
+\texttt{aggregate} command. Given a response variable and one or more
+classification factors, it applies a specific function to all data chunk,
+where each chunk is defined based on factor levels. The results are stored
+in a matrix, which can easily be coerced to a data frame
+using, e.g., \texttt{as.data.frame} or \texttt{Hmisc::matrix2dataFrame}. 
+
+Note that enhanced results can be printed on the console using the
+\texttt{prn} command. 
+
+Here is a first example, using a dedicated function to print the mean and
+standard deviation (SD) of a numerical variable:
+\begin{verbatim}
+f <- function(x, na.opts = TRUE) c(mean = mean(x, na.rm = na.opts), sd = sd(x, 
+    na.rm = na.opts))
+out <- with(birthwt, summarize(bwt, race, f))
+\end{verbatim}
+
+Here is the output produced by R:
+\begin{verbatim}
+Average baby weight by ethnicity   out
+
+   race  bwt    sd
+3 White 3103 727.9
+1 Black 2720 638.7
+2 Other 2805 722.2
+\end{verbatim}
+
+Contrary to \texttt{aggregate}, this command provides multiway data
+structure in case we ask to compute more than one quantity. In this case,
+the dimension of \texttt{out} is a 3 by 3 data frame.
+
+Summarizing multivariate responses or predictors is also possible, with either \texttt{summarize} or \texttt{mApply}. Of course, any built-in functions, such as \texttt{colMeans} could be used in place of our custom summary command.
+
+\begin{verbatim}
+with(birthwt, summarize(bwt, llist(race, smoke), f))
+\end{verbatim}
+
+The second command, \texttt{bystats}, (or \texttt{bystats2} for two-way
+tabular output) allows to describe with any custom or built-in function one
+or multiple outcome by two explanatory variables, or even more. Sample size
+and the number of missing values are also printed. 
+
+With the following instruction,
+\begin{verbatim}
+with(birthwt, bystats(cbind(bwt, lwt), smoke, race))
+\end{verbatim}
+we would get
+\begin{verbatim}
+ Mean of cbind(bwt, lwt) by smoke 
+
+            N  bwt   lwt
+No White   44 3429 63.11
+Yes White  52 2827 57.41
+No Black   16 2854 67.93
+Yes Black  10 2504 64.82
+No Other   55 2816 54.16
+Yes Other  12 2757 56.36
+ALL       189 2945 59.01
+\end{verbatim}
+whereas
+\begin{verbatim}
+with(birthwt, bystats2(lwt, smoke, race))
+\end{verbatim}
+gives
+\begin{verbatim}
+ Mean of lwt by smoke 
+
++----+
+|N   |
+|Mean|
++----+
++---+-----+-----+-----+-----+
+|No | 44  | 16  | 55  |115  |
+|   |63.11|67.93|54.16|59.50|
++---+-----+-----+-----+-----+
+|Yes| 52  | 10  | 12  | 74  |
+|   |57.41|64.82|56.36|58.24|
++---+-----+-----+-----+-----+
+|ALL| 96  | 26  | 67  |189  |
+|   |60.02|66.73|54.55|59.01|
++---+-----+-----+-----+-----+
+\end{verbatim}
+
+The third and last command is \texttt{summary.formula}, which can be
+abbreviated as \texttt{summary} as long as formula is used to describe
+variables relationships. There are three main configurations
+(\texttt{method=}): "response", where a numerical variable is summarized for
+each level of one or more variables (numerical variables will be discretized
+in 4 classes), as \texttt{summarize} does; "cross", to compute conditional
+and marginal means of several response variables described by at most 3
+explanatory variables (again, continuous predictors are represented as
+quartiles); "reverse", to summarize univariate distribution of a set of
+variables for each level of a classification variable (which appears on the
+left-hand side of the formula). Variables are viewed as continuous as long
+as they have more than 10 distinct values, but this can be changed by
+setting, e.g., \texttt{continuous = 5}. When \texttt{method = "reverse"}, it
+is possible to add \texttt{overall = TRUE}, \texttt{test = TRUE} to add
+overall statistics and corresponding statistical tests of null effect
+between the groups.
+
+Here are some examples of use, with their outputs.
+
+\begin{verbatim}
+> summary(bwt ~ race + ht + lwt, data = birthwt)
+
+Baby weight    N=189
+
++-------+------------+---+----+
+|       |            |N  |bwt |
++-------+------------+---+----+
+|race   |White       | 96|3103|
+|       |Black       | 26|2720|
+|       |Other       | 67|2805|
++-------+------------+---+----+
+|ht     |No          |177|2972|
+|       |Yes         | 12|2537|
++-------+------------+---+----+
+|lwt    |[36.4, 50.9)| 53|2656|
+|       |[50.9, 55.5)| 43|3059|
+|       |[55.5, 64.1)| 46|3075|
+|       |[64.1,113.6]| 47|3038|
++-------+------------+---+----+
+|Overall|            |189|2945|
++-------+------------+---+----+
+\end{verbatim}
+
+\begin{verbatim}
+> summary(cbind(lwt, age) ~ race + bwt, data = birthwt, method = "cross")
+
+ mean by race, bwt 
+
++-------+
+|N      |
+|Missing|
+|lwt    |
+|age    |
++-------+
++-----+-----------+-----------+-----------+-----------+-----+
+| race|[ 709,2424)|[2424,3005)|[3005,3544)|[3544,4990]| ALL |
++-----+-----------+-----------+-----------+-----------+-----+
+|White|    19     |    23     |    20     |    33     | 95  |
+|     |   0       |   1       |   0       |   0       |1    |
+|     |   55.55   |   57.67   |   62.23   |   63.25   |60.14|
+|     |   22.74   |   24.78   |   24.50   |   24.91   |24.36|
++-----+-----------+-----------+-----------+-----------+-----+
+|Black|     9     |     9     |     6     |     2     | 26  |
+|     |   0       |   0       |   0       |   0       |0    |
+|     |   65.10   |   59.70   |   70.83   |   93.41   |66.73|
+|     |   23.44   |   20.89   |   20.00   |   20.50   |21.54|
++-----+-----------+-----------+-----------+-----------+-----+
+|Other|    20     |    16     |    19     |    12     | 67  |
+|     |   0       |   0       |   0       |   0       |0    |
+|     |   51.23   |   52.95   |   58.90   |   55.34   |54.55|
+|     |   22.20   |   22.69   |   22.26   |   22.50   |22.39|
++-----+-----------+-----------+-----------+-----------+-----+
+|ALL  |    48     |    48     |    45     |    47     |188  |
+|     |   0       |   1       |   0       |   0       |1    |
+|     |   55.54   |   56.48   |   61.97   |   62.51   |59.06|
+|     |   22.65   |   23.35   |   22.96   |   24.11   |23.27|
++-----+-----------+-----------+-----------+-----------+-----+
+\end{verbatim}
+
+\begin{verbatim}
+> summary(low ~ race + ht, data = birthwt, fun = table)
+
+low    N=189
+
++-------+-----+---+---+---+
+|       |     |N  |No |Yes|
++-------+-----+---+---+---+
+|race   |White| 96| 73|23 |
+|       |Black| 26| 15|11 |
+|       |Other| 67| 42|25 |
++-------+-----+---+---+---+
+|ht     |No   |177|125|52 |
+|       |Yes  | 12|  5| 7 |
++-------+-----+---+---+---+
+|Overall|     |189|130|59 |
++-------+-----+---+---+---+
+\end{verbatim}
+
+Finally, here is a more complex Table produced by \texttt{summary.formula}
+with \texttt{method = "reverse"}.
+
+\begin{verbatim}
+out <- summary(low ~ race + age + ui, data = birthwt, method = "reverse", overall = TRUE, 
+    test = TRUE)
+print(out, prmsd = TRUE, digits = 2)
+\end{verbatim}
+
+Although we display the output on the console directly, it is also possible
+to build a $\LaTeX$ Table using the \texttt{latex} function.
+
+\begin{verbatim}
+latex(out, file = "tab-summary.tex", ctable = TRUE, digits = 1, exclude1 = FALSE, caption = NULL)
+\end{verbatim}
+
+Here is the final output
+
+\input{tab-summary.tex}
 
 \subsection{The \texttt{plyr} package}
 The \texttt{plyr} package\autocite{wickham11} offers a general
@@ -1596,3 +1825,9 @@ xYplot(Cbind(bwt, lwr, upr) ~ numericScale(race), groups = smoke,
 \printindex
 
 \end{document}
+
+%%% Local Variables: 
+%%% mode: LaTeX
+%%% TeX-PDF-mode: t
+%%% TeX-engine: xetex 
+%%% End:
