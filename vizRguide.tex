@@ -1,4 +1,4 @@
-% Time-stamp: <2013-11-11 12:47:38 chl>
+% Time-stamp: <2015-04-10 12:42:35 chl>
 
 %
 % Here is a temptative textbook on R graphics with the lattice package.
@@ -22,6 +22,7 @@
 % Override default headings and chapter style
 \usepackage{fancyhdr}
 \usepackage[Sonny]{fncychap}
+\usepackage[eventxtindent=3pt,oddtxtexdent=3pt]{thumbs}
 
 % Use margin note
 \usepackage{marginnote}
@@ -120,6 +121,13 @@
 \definecolor{myred3}{rgb}{.65,.38,.38}
 \definecolor{myred4}{rgb}{.83,.64,.64}
 \definecolor{shadecolor}{rgb}{.87,.93,.89}
+\definecolor{cornflowerblue}{rgb}{.39,.58,.93}
+\definecolor{seagreen}{rgb}{.18,.54,.34}
+\definecolor{dandelion}{rgb}{.94,.88,.19}
+\definecolor{peach}{rgb}{.996,.851,.723}
+\definecolor{tan}{rgb}{.82,.70,.55}
+
+
 
 % Here is how I customized a listings environment for pretty printing
 % R code. Keywords are highlighted and automatically appended to the
@@ -304,6 +312,7 @@ graphical capabilities\autocite{mitchell08}.
 
 % --------------------------------------------------------------- Chapter 2 --
 \chapter{Data management}
+\addthumb{Data munging}{\Large\textsf{Tidying}}{white}{cornflowerblue}
 
 \section{Structuring data}
 In R, the most common structure used to store a data set with
@@ -339,18 +348,136 @@ data(birthwt, package="MASS")
 str(birthwt)
 \end{verbatim}
 
-Instead, we might want to recode all categorical predictors as \R
-factors, like this:
+\subsection{Variable recoding and annotation}
+The \texttt{Hmisc} package includes numerous \R functions that will
+facilitate the task of data checking (\texttt{describe} provides
+``codebook'' facilities), summarizing (\texttt{summary.formula}) or
+aggregating data, (\texttt{summary.formula}).
+
+Here are some examples of use with the \texttt{birthwt} data. For
+illustration purpose, we set some observations as missing on two variables
+(\texttt{age} and \texttt{ftv}).
+
 \begin{verbatim}
+set.seed(101)
+birthwt$age[5] <- NA
+birthwt$ftv[sample(1:nrow(birthwt), 5)] <- NA
+yesno <- c("No", "Yes")
 birthwt <- within(birthwt, {
-  low <- factor(low, labels=c("No","Yes"))
-  race <- factor(race, labels=c("White","Black","Other"))
-  smoke <- factor(smoke, labels=c("No","Yes"))
-  ui <- factor(ui, labels=c("No","Yes"))
-  ht <- factor(ht, labels=c("No","Yes"))
+    smoke <- factor(smoke, labels = yesno)
+    low <- factor(low, labels = yesno)
+    ht <- factor(ht, labels = yesno)
+    ui <- factor(ui, labels = yesno)
+    race <- factor(race, levels = 1:3, labels = c("White", "Black", "Other"))
+    lwt <- lwt/2.2  ## weight in kg
 })
 \end{verbatim}
 
+It often helps to keep variable names short and informative, and to have
+separated labels and/or units in case of continuous measurements. This is
+available via the \texttt{label} and \texttt{units} functions. Note that
+\texttt{label} allows to annotate the data frame as well.
+
+\begin{verbatim}
+library(Hmisc)
+label(birthwt$age) <- "Mother age"
+units(birthwt$age) <- "years"
+label(birthwt$bwt) <- "Baby weight"
+units(birthwt$bwt) <- "grams"
+label(birthwt, self = TRUE) <- "Hosmer & Lemeshow's low birth weight study."
+\end{verbatim}
+
+These labels can then be used in almost every \texttt{Hmisc} functions, even
+when using \texttt{list.tree} in place of \texttt{str}. However, we will see
+that there mostly useful when generating Tables or Figures.
+
+The \texttt{contents} command offers a quick summary of data format and
+missing values, and it provides a list of labels associated to variables
+treated as factor by R.
+
+Once we have a working data frame, the functions \texttt{contents} and
+\texttt{describe} provide two quick summary of the data.
+
+\begin{verbatim}
+> contents(birthwt)
+
+Data frame:birthwt	189 observations and 10 variables    Maximum # NAs:5
+
+
+           Labels Units Levels   Class Storage NAs
+low                          2         integer   0
+age    Mother age years        integer integer   1
+lwt                                     double   0
+race                         3         integer   0
+smoke                        2         integer   0
+ptl                                    integer   0
+ht                           2         integer   0
+ui                           2         integer   0
+ftv                                    integer   5
+bwt   Baby weight grams        integer integer   0
+
++--------+-----------------+
+|Variable|Levels           |
++--------+-----------------+
+|  low   |No,Yes           |
+|  smoke |                 |
+|  ht    |                 |
+|  ui    |                 |
++--------+-----------------+
+|  race  |White,Black,Other|
++--------+-----------------+
+\end{verbatim}
+
+As can be seen, \texttt{contents} displays storage mode and class of R
+variables that are present in the data frame. The number of missing values
+is also reported for each variable. The levels of each \texttt{factor}-type
+variable is also printed at the end of the output.
+
+\begin{verbatim}
+> describe(subset(birthwt, select = c(low, age, race, ftv)), digits = 3)
+
+ 4  Variables      189  Observations
+--------------------------------------------------------------------------------
+low
+      n missing  unique
+    189       0       2
+
+No (130, 69%), Yes (59, 31%)
+--------------------------------------------------------------------------------
+age : Mother age [years]
+      n missing  unique    Info    Mean     .05     .10     .25     .50     .75
+    188       1      24       1    23.3      16      17      19      23      26
+    .90     .95
+     31      32
+
+lowest : 14 15 16 17 18, highest: 33 34 35 36 45
+--------------------------------------------------------------------------------
+race
+      n missing  unique
+    189       0       3
+
+White (96, 51%), Black (26, 14%), Other (67, 35%)
+--------------------------------------------------------------------------------
+ftv
+      n missing  unique    Info    Mean
+    184       5       6    0.83   0.783
+
+           0  1  2 3 4 6
+Frequency 98 45 30 7 3 1
+%         53 24 16 4 2 1
+--------------------------------------------------------------------------------
+\end{verbatim}
+
+The \texttt{describe} function gives more details, and, in particular,
+provides useful summary statistics for each variable. Here, we only
+considered four variables: a binary variable (\texttt{low}), a continuous
+measure (\texttt{age}), a three-level factor (\texttt{race}), and a count
+variable (\texttt{ftv}). The output will be different depending on the type
+of variable, and for all but continuous measures (defined as variable taking
+at least 10 distinct values) \texttt{describe} will display a table of
+counts and frequencies.
+
+\subsection{Variable transformation}
 In case we would like to consider one of the above factors as a
 numerical variable, we can now use \texttt{as.numeric} and \R will
 take care of attributing the lowest integer score to the baseline
@@ -405,17 +532,19 @@ levels of two explanatory variables in the low birth dataset.
 \section{Summarizing data}
 Statisticians generally spend a great part of their time in data
 cleansing, data transformation or re-expression\autocite{hoaglin83},
-and data visualization. The \texttt{Hmisc} package includes numerous
-\R functions that will facilitate the task of data checking
-(\texttt{describe} provides ``codebook'' facilities), summarizing
-(\texttt{summary.formula}) or aggregating data,
-(\texttt{summary.formula}).
+and data visualization. 
 
+
+\subsection{The \texttt{Hmisc} package}
+
+\subsection{The \texttt{plyr} package}
 The \texttt{plyr} package\autocite{wickham11} offers a general
 solution to those kind of tasks.
 
 % --------------------------------------------------------------- Chapter 3 --
 \chapter{Univariate distributions}
+\addthumb{Lattice graphics}{\Large\textsf{Lattice}}{white}{seagreen}
+
 \lipsum[1]
 
 \section{Stripchart}
@@ -1333,6 +1462,12 @@ numerical variables across the levels of a third factor.
 % stem and leaf plot
 % stripplot with stack=TRUE
 
+% --------------------------------------------------------------- Chapter 7 --
+\chapter{The ggplot2 package}
+\addthumb{Ggplot graphics}{\Large\textsf{Ggplot}}{white}{tan}
+
+
+% --------------------------------------------------------------- Chapter 8 --
 \chapter{Interactive and dynamic displays}
 
 \section{Exploratory data analysis}
