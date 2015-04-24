@@ -1,4 +1,4 @@
-% Time-stamp: <2015-04-10 18:08:05 chl>
+% Time-stamp: <2015-04-24 11:56:50 chl>
 
 %
 % Here is a temptative textbook on R graphics with the lattice package.
@@ -314,6 +314,13 @@ graphical capabilities\autocite{mitchell08}.
 
 \section{Base vs. {\tt lattice} graphics}
 
+\R comes with several graphical system, including so-called ``Base''
+graphics, which rely on \texttt{grDevices} and ??. While these plotting
+functions are quite useful, they lack several interesting aspects that are
+available through \texttt{grid}-based packages, including \texttt{lattice}
+and \texttt{ggplot2}, and in particular the \texttt{update} and
+\texttt{print} function. 
+
 \section{The grammar of graphics}
 
 % --------------------------------------------------------------- Chapter 2 --
@@ -321,7 +328,7 @@ graphical capabilities\autocite{mitchell08}.
 \addthumb{Data munging}{\Large\textsf{Tidying}}{white}{cornflowerblue}
 
 \section{Structuring data}
-In R, the most common structure used to store a data set with
+In \R, the most common structure used to store a data set with
 mixed-type variables is a \texttt{data.frame}. Such an \R object
 presents several characteristics that makes it most appropriate for
 managing statistical data structure, with few exceptions (e.g., when
@@ -1261,7 +1268,8 @@ xyplot(xt) +
   {\caption*{Discrete symmetric smoothing kernels, available in
       \texttt{latticeExtra}, can be used instead of a rolling
       mean. Here an approximate gaussian filter was used to highlight
-      the seasonal component.}}
+      the seasonal component. Of note, the above \R command makes use of a
+      \texttt{layer}, see also Chapter~\ref{chap:6}.}}
 \end{figure}
 
 \begin{figure}[H]
@@ -1698,6 +1706,9 @@ horizonplot(EuStockMarkets, colorkey=TRUE) + infolayers
 
 \section{Level plot}
 
+Level plot can be used to display data summaries as ``heatmap''. Here are
+two examples:
+
 \begin{figure}[H]
 \begin{lstlisting}
 data(Harman23.cor)
@@ -1722,9 +1733,23 @@ levelplot(Harman23.cor$cov, scales=list(x=list(rot=45)),
   {\caption*{The default color scheme can be changed easily. Here,
       we are using a Red-Blue color palette, from the
       \texttt{RColorBrewer} package. (Note that it introduces little
-      changes wompared to the preceding plot because a custom theme is
-    currently in use for the whole textbook.}} 
+      changes compared to the preceding plot because a custom theme is
+    currently in use for the whole textbook.)}} 
 \end{figure}
+
+Sometimes, it is helpful to reorder the entries in a correlation matrix or a
+two-way cross-classification. This can be done using \texttt{order} or
+custom packages, like 
+
+
+It is also possible to combine a dendrogram with a distance matrix, and add
+this clustering information to an heatmap. Here is an illustration using the
+\texttt{mtcars} dataset and the \texttt{dendrogramGrob} function from
+\texttt{latticeExtra}. 
+
+
+
+
 
 % --------------------------------------------------------------- Chapter 5 --
 \chapter{Multi-way graphics}
@@ -1745,7 +1770,7 @@ numerical variables across the levels of a third factor.
 
 % --------------------------------------------------------------- Chapter 6 --
 \chapter{Customizing theme and panels}
-
+\label{chap:6}
 % stem and leaf plot
 % stripplot with stack=TRUE
 
@@ -1808,6 +1833,14 @@ xYplot(Cbind(bwt, lwr, upr) ~ numericScale(race), groups = smoke,
 \chapter{The ggplot2 package}
 \addthumb{Ggplot graphics}{\Large\textsf{Ggplot}}{white}{tan}
 
+\section{Why ggplot2}
+
+How does \texttt{ggplot2} differ from \texttt{lattice}? Both packages rely
+on the \texttt{grid} system. However, unlike \texttt{lattice},
+\texttt{ggplot2} makes heavy use of the so-called ``Grammar of Graphics'' approach.\autocite{wilkinson05}
+
+
+\section{Core components of a ggplot graphic}
 
 % --------------------------------------------------------------- Chapter 8 --
 \chapter{Interactive and dynamic displays}
